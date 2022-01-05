@@ -37,8 +37,9 @@ public class GithubJob {
             @Override
             public void run() {
                 try {
+                    boolean notifyForNewPrs = !allPrIds.isEmpty();
                     HashSet<GHPullRequest> newPrs = new HashSet<>();
-                    myself.getAllRepositories()
+                    List<RepositoryDescription> repos = myself.getAllRepositories()
                         .values().stream()
                         .map(repo -> {
                             try {
@@ -50,19 +51,26 @@ public class GithubJob {
                                     .collect(Collectors.toSet());
                                 prIds.removeAll(allPrIds);
                                 allPrIds.addAll(prIds);
+
                                 pullRequests.forEach(pr -> {
                                     if (prIds.contains(pr.getId())) {
                                         newPrs.add(pr);
                                     }
                                 });
+
                                 return new RepositoryDescription(repo.getFullName(), repo, pullRequests);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
                         })
                         .collect(Collectors.toList());
-                    newPrs.forEach(pr -> gui.showNotification("New PR in " + pr.getRepository().getFullName(),
-                        pr.getTitle()));
+
+                    gui.setMenu(login, repos);
+
+                    if (notifyForNewPrs) {
+                        newPrs.forEach(pr -> gui.showNotification("New PR in " + pr.getRepository().getFullName(),
+                            pr.getTitle()));
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
